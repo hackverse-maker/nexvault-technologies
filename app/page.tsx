@@ -45,10 +45,9 @@ export default function Page() {
       <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.07] bg-[#0b1120]/75 backdrop-blur-xl">
         <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-6 lg:px-10">
           <Link href="#top" className="flex items-center gap-3" aria-label="Nexvault home">
-            <span className="relative flex size-10 items-center justify-center rounded-xl border border-blue-400/40 bg-blue-500/10 shadow-[0_0_28px_rgba(59,130,246,.22)]">
-              <span className="text-xl font-black tracking-tighter text-blue-300">N</span>
+            <span className="flex h-12 w-[164px] items-center overflow-hidden rounded-xl bg-white px-2 shadow-[0_0_28px_rgba(59,130,246,.18)]">
+              <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/NexVault%20Technologies%20Orbit%20Logo-EchDBXJkJvnLIOiEbf8qYB76Otnp7A.png" alt="NexVault Technologies" className="h-full w-full object-contain mix-blend-multiply" />
             </span>
-            <span className="leading-none"><strong className="block text-[15px] tracking-[0.2em]">NEXVAULT</strong><small className="mt-1 block text-[8px] tracking-[0.38em] text-slate-400">TECHNOLOGIES</small></span>
           </Link>
           <nav className="hidden items-center gap-8 text-sm text-slate-300 lg:flex">
             <Link className="transition-colors hover:text-white" href="#top">Home</Link>
