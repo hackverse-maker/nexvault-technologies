@@ -187,7 +187,7 @@ export const socialLinks = [{ label: 'Instagram', href: '#' }, { label: 'LinkedI
 
 export const mobileMenuLabel = 'Open navigation'
 
-export const footerHeading = 'Let's make something useful.'
+export const footerHeading = 'Let’s make something useful.'
 
 export const pageEyebrow = 'Nexvault Technologies'
 
@@ -333,7 +333,7 @@ export const servicePromise = 'Good digital work should feel clear.'
 
 export const contactHeading = 'Tell us what is next.'
 
-export const quoteHeading = 'Let's make the next move clear.'
+export const quoteHeading = 'Let’s make the next move clear.'
 
 export const homeHeading = 'Digital work with a point of view.'
 

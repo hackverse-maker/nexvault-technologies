@@ -83,12 +83,68 @@ export const mediaLibrary = pgTable('media_library', {
   width: integer('width'),
   height: integer('height'),
   altText: text('alt_text').notNull().default(''),
+  caption: text('caption').notNull().default(''),
+  folder: text('folder').notNull().default('general'),
+  tags: jsonb('tags').notNull().default([]),
   uploadedBy: uuid('uploaded_by').references(() => adminUsers.id, { onDelete: 'set null' }),
   createdAt: createdAt(),
+  updatedAt: updatedAt(),
 }, (table) => [
   check('media_library_size_check', sql`${table.byteSize} > 0`),
   check('media_library_dimensions_check', sql`(${table.width} is null or ${table.width} > 0) and (${table.height} is null or ${table.height} > 0)`),
+  index('media_library_folder_idx').on(table.folder),
 ])
+
+export const mediaAssignments = pgTable('media_assignments', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  mediaId: uuid('media_id').notNull().references(() => mediaLibrary.id, { onDelete: 'cascade' }),
+  targetType: text('target_type').notNull(),
+  targetId: text('target_id'),
+  role: text('role').notNull().default('image'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: createdAt(),
+}, (table) => [
+  check('media_assignments_target_type_check', sql`${table.targetType} in ('page', 'section', 'product', 'service', 'header', 'footer', 'website')`),
+  index('media_assignments_media_idx').on(table.mediaId),
+  index('media_assignments_target_idx').on(table.targetType, table.targetId),
+])
+
+export const heroSlides = pgTable('hero_slides', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  mediaId: uuid('media_id').references(() => mediaLibrary.id, { onDelete: 'set null' }),
+  title: text('title').notNull().default(''),
+  subtitle: text('subtitle').notNull().default(''),
+  ctaLabel: text('cta_label').notNull().default(''),
+  ctaHref: text('cta_href').notNull().default(''),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isVisible: boolean('is_visible').notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (table) => [index('hero_slides_sort_idx').on(table.sortOrder)])
+
+export const sliders = pgTable('sliders', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  description: text('description').notNull().default(''),
+  pageId: uuid('page_id').references(() => pages.id, { onDelete: 'cascade' }),
+  isVisible: boolean('is_visible').notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (table) => [index('sliders_page_idx').on(table.pageId)])
+
+export const sliderSlides = pgTable('slider_slides', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  sliderId: uuid('slider_id').notNull().references(() => sliders.id, { onDelete: 'cascade' }),
+  mediaId: uuid('media_id').references(() => mediaLibrary.id, { onDelete: 'set null' }),
+  title: text('title').notNull().default(''),
+  caption: text('caption').notNull().default(''),
+  ctaLabel: text('cta_label').notNull().default(''),
+  ctaHref: text('cta_href').notNull().default(''),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isVisible: boolean('is_visible').notNull().default(true),
+  createdAt: createdAt(),
+}, (table) => [index('slider_slides_slider_idx').on(table.sliderId, table.sortOrder)])
 
 export const websiteSettings = pgTable('website_settings', {
   id: smallint('id').primaryKey().default(1),
@@ -158,6 +214,7 @@ export const navigationItems = pgTable('navigation_items', {
   location: text('location').notNull().default('header'),
   targetPageId: uuid('target_page_id').references(() => pages.id, { onDelete: 'set null' }),
   targetUrl: text('target_url'),
+  footerColumnId: uuid('footer_column_id').references(() => footerColumns.id, { onDelete: 'set null' }),
   sortOrder: integer('sort_order').notNull().default(0),
   isVisible: boolean('is_visible').notNull().default(true),
   createdAt: createdAt(),
@@ -168,12 +225,33 @@ export const navigationItems = pgTable('navigation_items', {
   uniqueIndex('navigation_items_location_sort_uidx').on(table.location, table.sortOrder),
 ])
 
+export const footerColumns = pgTable('footer_columns', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  title: text('title').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isVisible: boolean('is_visible').notNull().default(true),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (table) => [index('footer_columns_sort_idx').on(table.sortOrder)])
+
+export const headerSettings = pgTable('header_settings', {
+  id: smallint('id').primaryKey().default(1),
+  logoMediaId: uuid('logo_media_id').references(() => mediaLibrary.id, { onDelete: 'set null' }),
+  ctaLabel: text('cta_label').notNull().default('Get a free quote'),
+  ctaHref: text('cta_href').notNull().default('/get-a-quote'),
+  whatsappEnabled: boolean('whatsapp_enabled').notNull().default(true),
+  whatsappNumber: text('whatsapp_number'),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (table) => [check('header_settings_singleton_check', sql`${table.id} = 1`)])
+
 export const footerConfiguration = pgTable('footer_configuration', {
   id: smallint('id').primaryKey().default(1),
   heading: text('heading').notNull().default(''),
   description: text('description').notNull().default(''),
   copyrightText: text('copyright_text').notNull().default(''),
   showSocialLinks: boolean('show_social_links').notNull().default(true),
+  logoMediaId: uuid('logo_media_id').references(() => mediaLibrary.id, { onDelete: 'set null' }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (table) => [check('footer_configuration_singleton_check', sql`${table.id} = 1`)])
@@ -226,6 +304,16 @@ export const contactInquiries = pgTable('contact_inquiries', {
   check('contact_inquiries_status_check', sql`${table.status} in ('new', 'viewed', 'replied', 'archived')`),
   index('contact_inquiries_status_created_idx').on(table.status, table.createdAt),
   index('contact_inquiries_email_idx').on(table.email),
+])
+
+export const loginAttempts = pgTable('login_attempts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  email: text('email').notNull(),
+  ip: text('ip').notNull(),
+  success: boolean('success').notNull().default(false),
+  createdAt: createdAt(),
+}, (table) => [
+  index('login_attempts_email_ip_created_idx').on(table.email, table.ip, table.createdAt),
 ])
 
 export const activityLogs = pgTable('activity_logs', {
