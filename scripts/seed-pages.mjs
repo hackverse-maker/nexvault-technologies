@@ -27,9 +27,13 @@ const SERVICES = [
 ]
 
 const PROJECTS = [
-  { slug: 'northstar-studio', title: 'Northstar Studio', category: 'Business Websites', description: 'A confident digital home for an architecture practice with a point of view.', media: 'modern-office.jpg' },
-  { slug: 'form-and-function', title: 'Form & Function', category: 'E-commerce', description: 'A considered shopping experience for a modern furniture label.', media: 'design-workspace.jpg' },
-  { slug: 'local-foundry', title: 'Local Foundry', category: 'Digital Campaigns', description: 'A local growth system designed to connect a neighborhood brand with its next customers.', media: 'analytics-dashboard.jpg' },
+  { slug: 'northstar-studio', title: 'Northstar Studio', category: 'Business Websites', description: 'A confident digital home for an architecture practice with a point of view.', media: 'modern-office.jpg', tech: ['Next.js', 'Strategy', 'UI/UX'] },
+  { slug: 'form-and-function', title: 'Form & Function', category: 'E-commerce', description: 'A considered shopping experience for a modern furniture label.', media: 'design-workspace.jpg', tech: ['E-commerce', 'Art Direction', 'SEO'] },
+  { slug: 'local-foundry', title: 'Local Foundry', category: 'Digital Campaigns', description: 'A local growth system designed to connect a neighborhood brand with its next customers.', media: 'analytics-dashboard.jpg', tech: ['Local SEO', 'Google Ads', 'Content'] },
+  { slug: 'meridian-row', title: 'Meridian Row', category: 'Business Websites', description: 'A refined corporate presence for a property group, built around clarity and credibility.', media: 'architecture-white.jpg', tech: ['Next.js', 'Responsive Design', 'SEO'] },
+  { slug: 'copper-and-clay', title: 'Copper & Clay', category: 'E-commerce', description: 'A warm, product-first storefront concept for a homewares brand.', media: 'furniture-store.jpg', tech: ['E-commerce', 'UI/UX', 'Conversion Design'] },
+  { slug: 'fieldnote-studio', title: 'Fieldnote Studio', category: 'UI/UX Design', description: 'A calm, editorial interface system for a research and notes product.', media: 'design-interior.jpg', tech: ['UI/UX', 'Design System', 'Prototyping'] },
+  { slug: 'juniper-and-co', title: 'Juniper & Co', category: 'Branding', description: 'A minimal identity direction for a boutique wellness label.', media: 'minimal-chair.jpg', tech: ['Branding', 'Logo Design', 'Art Direction'] },
 ]
 
 const PRINCIPLES = [
@@ -149,7 +153,7 @@ console.log(`media images available: ${mediaUrlByName.size}`)
   await replaceSections(pageId, [
     hero('The studio', 'A digital partner, not a vendor.',
       'Nexvault helps businesses turn scattered digital activity into a clear, credible growth system.',
-      'Start a conversation', '/get-a-quote'),
+      'Start a conversation', '/get-a-quote', { bgImage: img('office-meeting.jpg') }),
     {
       type: 'text',
       content: {
@@ -219,7 +223,7 @@ console.log(`media images available: ${mediaUrlByName.size}`)
   await replaceSections(pageId, [
     hero('What we do', 'Everything your business needs to move forward.',
       'The right mix of strategy, craft, and technology for the next stage of your business.',
-      'Get a free quote', '/get-a-quote'),
+      'Get a free quote', '/get-a-quote', { bgImage: img('developers-working.jpg') }),
     ...groups.map((g) => ({
       type: 'services',
       content: {
@@ -258,13 +262,14 @@ console.log(`media images available: ${mediaUrlByName.size}`)
   await replaceSections(pageId, [
     hero('Selected work', 'Digital presence, with a point of view.',
       'A selection of demonstration work showing how we think, design, and build.',
-      'Start your project', '/get-a-quote'),
+      'Start your project', '/get-a-quote', { bgImage: img('design-flatlay.jpg') }),
     {
       type: 'portfolio',
       content: {
         eyebrow: 'Selected work', title: 'Our work', text: '',
         items: PROJECTS.map((p) => ({
-          title: p.title, category: p.category, description: p.description, image: img(p.media),
+          slug: p.slug, title: p.title, category: p.category, description: p.description,
+          image: img(p.media), tech: p.tech, link: '', demo: true,
         })),
         background: 'dark',
       },
@@ -290,7 +295,7 @@ console.log(`media images available: ${mediaUrlByName.size}`)
   await replaceSections(pageId, [
     hero('Ways to work together', 'Pricing that respects your ambition.',
       'Every business starts from a different place. We scope the right engagement instead of forcing you into a rigid package.',
-      'Get a free quote', '/get-a-quote'),
+      'Get a free quote', '/get-a-quote', { bgImage: img('strategy-planning.jpg') }),
     {
       type: 'pricing',
       content: {
@@ -328,7 +333,7 @@ console.log(`media images available: ${mediaUrlByName.size}`)
     'Practical notes on web development, local search, and growing a business with a clearer digital presence.')
   await replaceSections(pageId, [
     hero('Journal', 'Notes on building a better digital presence.',
-      'Notes on building a better digital presence.', 'Get in touch', '/contact', { layout: 'center' }),
+      'Notes on building a better digital presence.', 'Get in touch', '/contact', { layout: 'center', bgImage: img('writing-desk.jpg') }),
     { type: 'blog_grid', content: { eyebrow: 'Journal', title: 'Latest notes', text: '', background: 'default' } },
     cta('Stay in the loop', 'Useful notes, occasionally.',
       'Practical writing on web development, local search, and digital growth — sent when there\u2019s something worth saying.',
@@ -346,7 +351,7 @@ console.log(`media images available: ${mediaUrlByName.size}`)
   await replaceSections(pageId, [
     hero('Start a conversation', 'Tell us what is next.',
       'Have a project in mind? Share a little context and we will come back with a thoughtful next step.',
-      'Get a free quote', '/get-a-quote', { layout: 'center' }),
+      'Get a free quote', '/get-a-quote', { layout: 'center', bgImage: img('business-meeting.jpg') }),
     {
       type: 'contact',
       content: {
@@ -373,7 +378,7 @@ console.log(`media images available: ${mediaUrlByName.size}`)
   await replaceSections(pageId, [
     hero('Project brief', 'Let\u2019s make the next move clear.',
       'Give us the useful details. We will give you a clear path forward. No pressure, no generic pitch. Just a useful first conversation.',
-      'Get a free quote', '/contact', { layout: 'center' }),
+      'Get a free quote', '/contact', { layout: 'center', bgImage: img('team-laptops.jpg') }),
     {
       type: 'about',
       content: {
@@ -440,7 +445,10 @@ for (const [slug, title, seoDesc, sectionsData, other] of [
     },
   })
   await replaceSections(pageId, [
-    hero('Legal', title, 'Last updated: October 2026', 'Back to home', '/', { layout: 'center' }),
+    hero('Legal', title, 'Last updated: October 2026', 'Back to home', '/', {
+      layout: 'center',
+      bgImage: img(slug === 'privacy-policy' ? 'code-screen.jpg' : 'code-laptop.jpg'),
+    }),
     ...secs,
   ])
   console.log(`seeded page: ${slug}`)

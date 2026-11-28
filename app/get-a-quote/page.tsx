@@ -14,5 +14,5 @@ export default async function GetAQuotePage({
   searchParams: Promise<{ package?: string }>
 }) {
   const { package: pkg } = await searchParams
-  return <CmsPage slug="get-a-quote" contactPackage={pkg ? `${pkg} package` : undefined} />
+  return <CmsPage slug="get-a-quote" contactPackage={pkg} />
 }

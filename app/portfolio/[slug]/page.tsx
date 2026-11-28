@@ -1,24 +1,30 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUpRight, Check } from 'lucide-react'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
 import { PageHero } from '@/components/site/page-hero'
 import { CtaBand } from '@/components/site/cta-band'
-import { projects, getProject } from '@/lib/site-data'
+import { MediaImg } from '@/components/site/media-image'
+import { getProjectBySlug, getProjectNeighbors, getPortfolioProjects } from '@/lib/projects'
+import { pageMetadata } from '@/lib/seo'
 
-export function generateStaticParams() {
+export const dynamic = 'force-dynamic'
+
+export async function generateStaticParams() {
+  const projects = await getPortfolioProjects()
   return projects.map((project) => ({ slug: project.slug }))
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const project = getProject(slug)
-  if (!project) return { title: 'Project — NexVault Technologies' }
-  return {
-    title: `${project.title} — NexVault Technologies`,
+  const project = await getProjectBySlug(slug)
+  if (!project) return pageMetadata({ title: 'Project not found', path: `/portfolio/${slug}` })
+  return pageMetadata({
+    title: project.title,
     description: project.description,
-  }
+    path: `/portfolio/${project.slug}`,
+  })
 }
 
 const deliverables = [
@@ -31,41 +37,54 @@ const deliverables = [
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const project = getProject(slug)
+  const [project, { next }] = await Promise.all([getProjectBySlug(slug), getProjectNeighbors(slug)])
   if (!project) notFound()
-
-  const index = projects.findIndex((p) => p.slug === project.slug)
-  const next = projects[(index + 1) % projects.length]
 
   return (
     <main className="site-shell">
       <SiteHeader />
 
-      <PageHero eyebrow={project.category} title={project.title} intro={project.description}>
+      <PageHero eyebrow={project.category} title={project.title} intro={project.description} image={project.image || undefined}>
         <div className="hero-actions">
           <Link className="text-link" href="/portfolio">
             <ArrowLeft size={16} style={{ marginRight: 6 }} /> All projects
           </Link>
+          {project.link && (
+            <a className="button" href={project.link} target="_blank" rel="noopener noreferrer">
+              Visit live site <ArrowUpRight size={16} />
+            </a>
+          )}
         </div>
       </PageHero>
 
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="container">
           <div
-            className={`bg-gradient-to-br ${project.accent}`}
             style={{
               border: '1px solid var(--line)',
               borderRadius: 12,
-              minHeight: 340,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              overflow: 'hidden',
               marginBottom: 48,
+              background: '#071c38',
             }}
           >
-            <span style={{ color: 'rgba(248,250,252,.8)', fontSize: 13, letterSpacing: '.16em', textTransform: 'uppercase', fontWeight: 700 }}>
-              {project.title} — concept visual
-            </span>
+            {project.image ? (
+              <MediaImg
+                src={project.image}
+                alt={project.title}
+                sizes="(max-width: 1160px) 100vw, 1160px"
+                style={{ width: '100%', height: 'auto', maxHeight: 520, objectFit: 'cover', display: 'block' }}
+              />
+            ) : (
+              <div
+                className={`bg-gradient-to-br ${project.accent}`}
+                style={{ minHeight: 340, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <span style={{ color: 'rgba(248,250,252,.8)', fontSize: 13, letterSpacing: '.16em', textTransform: 'uppercase', fontWeight: 700 }}>
+                  {project.title} — concept visual
+                </span>
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 48 }}>
@@ -74,6 +93,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <p className="eyebrow">Overview</p>
                 <h2>The idea behind the work.</h2>
               </div>
+              {project.demo && (
+                <p style={{ color: 'var(--muted)', fontSize: 12, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 16 }}>
+                  Demonstration project — shown for design purposes.
+                </p>
+              )}
               <p style={{ color: 'var(--muted)', lineHeight: 1.8, fontSize: 15 }}>
                 {project.description} Every NexVault engagement starts with a question: what does
                 this business need its digital presence to accomplish? For {project.title}, the
@@ -92,7 +116,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <h2>Tools and disciplines.</h2>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 32 }}>
-                {project.stack.map((tech) => (
+                {(project.tech.length > 0 ? project.tech : ['Tailored scope']).map((tech) => (
                   <span
                     key={tech}
                     style={{
@@ -122,16 +146,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             </div>
           </div>
 
-          <div style={{ marginTop: 56, border: '1px solid var(--line)', borderRadius: 12, padding: '28px 30px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 18 }}>
-            <div>
-              <p className="eyebrow">Next project</p>
-              <h3 style={{ margin: '8px 0 0' }}>{next.title}</h3>
-              <p style={{ color: 'var(--muted)', fontSize: 13, margin: '6px 0 0' }}>{next.category}</p>
+          {next && (
+            <div style={{ marginTop: 56, border: '1px solid var(--line)', borderRadius: 12, padding: '28px 30px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 18 }}>
+              <div>
+                <p className="eyebrow">Next project</p>
+                <h3 style={{ margin: '8px 0 0' }}>{next.title}</h3>
+                <p style={{ color: 'var(--muted)', fontSize: 13, margin: '6px 0 0' }}>{next.category}</p>
+              </div>
+              <Link className="button primary" href={`/portfolio/${next.slug}`}>
+                View project <ArrowRight size={16} />
+              </Link>
             </div>
-            <Link className="button primary" href={`/portfolio/${next.slug}`}>
-              View project <ArrowRight size={16} />
-            </Link>
-          </div>
+          )}
         </div>
       </section>
 

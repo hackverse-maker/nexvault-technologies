@@ -36,16 +36,35 @@ export function SiteHeaderClient({
           <Logo />
         )}
         <nav className={menuOpen ? 'nav-links open' : 'nav-links'} aria-label="Main navigation">
-          {navItems.map((item) => (
-            <Link
-              key={item.href + item.label}
-              href={item.href}
-              onClick={() => setMenuOpen(false)}
-              className={isActive(item.href) ? 'text-white' : undefined}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {navItems.map((item) =>
+            item.children?.length ? (
+              <div key={item.href + item.label} className="nav-dropdown">
+                <Link
+                  href={item.href}
+                  className={isActive(item.href) ? 'text-white' : undefined}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {item.label}
+                </Link>
+                <div className="nav-dropdown-menu">
+                  {item.children.map((child) => (
+                    <Link key={child.href + child.label} href={child.href} onClick={() => setMenuOpen(false)}>
+                      {child.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <Link
+                key={item.href + item.label}
+                href={item.href}
+                onClick={() => setMenuOpen(false)}
+                className={isActive(item.href) ? 'text-white' : undefined}
+              >
+                {item.label}
+              </Link>
+            ),
+          )}
           <Link className="nav-cta" href={ctaHref} onClick={() => setMenuOpen(false)}>
             {ctaLabel} <ArrowRight size={15} />
           </Link>

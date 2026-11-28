@@ -1,28 +1,32 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import { DEFAULT_DESCRIPTION, pageMetadata, SITE_NAME, SITE_URL } from '@/lib/seo'
+import { designCss, getDesignValues } from '@/lib/design'
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: 'NexVault Technologies | Build. Rank. Grow.',
-  description: 'NexVault Technologies builds premium websites, digital brands, and growth systems for ambitious businesses.',
+  description: DEFAULT_DESCRIPTION,
   generator: 'NexVault Technologies',
+  alternates: { canonical: '/' },
+  openGraph: {
+    siteName: SITE_NAME,
+    type: 'website',
+    locale: 'en_US',
+  },
+  twitter: { card: 'summary_large_image' },
+  robots: { index: true, follow: true },
   icons: {
     icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
+      { url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
     ],
-    apple: '/apple-icon.png',
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
+  manifest: '/site.webmanifest',
 }
 
 export const viewport: Viewport = {
@@ -33,14 +37,25 @@ export const viewport: Viewport = {
   ],
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const design = await getDesignValues()
+  const { css, fonts } = designCss(design)
   return (
     <html lang="en">
       <body className="antialiased">
+        {fonts.map((family) => (
+          <link
+            key={family}
+            rel="stylesheet"
+            href={`https://fonts.googleapis.com/css2?family=${family}&display=swap`}
+          />
+        ))}
+        {css && <style dangerouslySetInnerHTML={{ __html: css }} />}
+        {design.faviconUrl && <link rel="icon" href={design.faviconUrl} />}
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

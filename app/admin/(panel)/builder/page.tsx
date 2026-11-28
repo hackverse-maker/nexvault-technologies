@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { pages, sections, mediaLibrary } from '@/lib/db/schema'
 import { PageHeader, Card, Badge } from '@/components/admin/ui'
 import { SectionBuilder } from '@/components/admin/section-builder'
+import { PublishBar } from '@/components/admin/publish-bar'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Section Builder — NexVault Admin' }
@@ -51,6 +52,17 @@ export default async function BuilderPage({
           <Link href="/admin/sections" style={{ color: 'var(--cyan)', fontSize: 12 }}>Simple list view</Link>
         </div>
       </PageHeader>
+
+      <div style={{ marginBottom: 20 }}>
+        <PublishBar
+          pageId={selected.id}
+          slug={selected.slug}
+          status={selected.status}
+          draftSavedAt={selected.draftSavedAt?.toISOString() ?? null}
+          publishedAt={selected.publishedAt?.toISOString() ?? null}
+          hasSnapshot={selected.publishedSnapshot != null}
+        />
+      </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
         {allPages.map((p) => (

@@ -1,8 +1,9 @@
-import { desc } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { pages, sections } from '@/lib/db/schema'
+import { pageVersions, pages, sections } from '@/lib/db/schema'
 import { PageHeader, Card, Badge, EmptyState, inputStyle, labelStyle, thStyle, tdStyle } from '@/components/admin/ui'
 import { createPageAction, updatePageAction, deletePageAction, duplicatePageAction } from '../actions'
+import { PublishPageButton, RestoreVersionButton } from '@/components/admin/publish-controls'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Pages — NexVault Admin' }
@@ -13,6 +14,16 @@ export default async function AdminPagesPage() {
   const allPages = await db.query.pages.findMany({ orderBy: [desc(pages.updatedAt)] })
   const sectionRows = await db.select({ pageId: sections.pageId }).from(sections)
   const countFor = (id: string) => sectionRows.filter((s) => s.pageId === id).length
+  const versions = await db.query.pageVersions.findMany({ orderBy: [desc(pageVersions.createdAt)] })
+  const versionsFor = (id: string) => versions.filter((v) => v.pageId === id)
+
+  const unpublished = (page: (typeof allPages)[number]) => {
+    if (page.status !== 'published') return false
+    if (!page.publishedSnapshot) return true
+    const d = page.draftSavedAt?.getTime() ?? 0
+    const p = page.publishedAt?.getTime() ?? 0
+    return d > p
+  }
 
   return (
     <>
@@ -76,15 +87,37 @@ export default async function AdminPagesPage() {
                       </td>
                       <td style={tdStyle}>
                         <Badge tone={statusTone[page.status as keyof typeof statusTone] ?? 'slate'}>{page.status}</Badge>
+                        {unpublished(page) && (
+                          <Badge tone="amber">Unpublished changes</Badge>
+                        )}
                         {page.status === 'published' && (
                           <a href={`/${page.slug}`} target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: 6, fontSize: 10, color: 'var(--cyan)' }}>
                             View live ↗
                           </a>
                         )}
+                        {versionsFor(page.id).length > 0 && (
+                          <details style={{ marginTop: 8 }}>
+                            <summary style={{ color: 'var(--cyan)', fontSize: 11, cursor: 'pointer' }}>
+                              Version history ({versionsFor(page.id).length})
+                            </summary>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8, minWidth: 240 }}>
+                              {versionsFor(page.id).map((v) => (
+                                <div key={v.id} style={{ border: '1px solid var(--line)', borderRadius: 6, padding: '8px 10px', fontSize: 11 }}>
+                                  <p style={{ margin: 0, color: '#aac0d5' }}>
+                                    v{v.versionNumber} · {new Date(v.createdAt).toLocaleString()}
+                                    {v.createdBy ? ` · ${v.createdBy}` : ''}
+                                  </p>
+                                  <RestoreVersionButton pageId={page.id} versionId={v.id} versionNumber={v.versionNumber} />
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
                       </td>
                       <td style={tdStyle}>{countFor(page.id)}</td>
                       <td style={tdStyle}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+                          <PublishPageButton pageId={page.id} label={unpublished(page) ? 'Publish changes' : 'Publish'} />
                           {page.status !== 'published' ? (
                             <StatusForm id={page.id} page={page} status="published" label="Publish" tone="green" />
                           ) : (

@@ -1,4 +1,5 @@
 import {
+  type AnyPgColumn,
   boolean,
   check,
   index,
@@ -146,6 +147,34 @@ export const sliderSlides = pgTable('slider_slides', {
   createdAt: createdAt(),
 }, (table) => [index('slider_slides_slider_idx').on(table.sliderId, table.sortOrder)])
 
+export const designSettings = pgTable('design_settings', {
+  id: smallint('id').primaryKey().default(1),
+  values: jsonb('values').notNull().default({}),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (table) => [check('design_settings_singleton_check', sql`${table.id} = 1`)])
+
+export const blogPosts = pgTable('blog_posts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  slug: text('slug').notNull().unique(),
+  title: text('title').notNull(),
+  excerpt: text('excerpt').notNull().default(''),
+  category: text('category').notNull().default('Journal'),
+  image: text('image').notNull().default(''),
+  content: jsonb('content').notNull().default([]),
+  tags: jsonb('tags').notNull().default([]),
+  readTime: text('read_time').notNull().default(''),
+  status: text('status').notNull().default('draft'),
+  seoTitle: text('seo_title'),
+  seoDescription: text('seo_description'),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (table) => [
+  check('blog_posts_status_check', sql`${table.status} in ('draft', 'published')`),
+  index('blog_posts_status_idx').on(table.status, table.publishedAt),
+])
+
 export const websiteSettings = pgTable('website_settings', {
   id: smallint('id').primaryKey().default(1),
   companyName: text('company_name').notNull(),
@@ -186,12 +215,28 @@ export const pages = pgTable('pages', {
   status: text('status').notNull().default('draft'),
   seoTitle: text('seo_title'),
   seoDescription: text('seo_description'),
+  ogImage: text('og_image'),
+  publishedSnapshot: jsonb('published_snapshot'),
   publishedAt: timestamp('published_at', { withTimezone: true }),
+  draftSavedAt: timestamp('draft_saved_at', { withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (table) => [
   check('pages_status_check', sql`${table.status} in ('draft', 'published', 'archived')`),
   index('pages_status_idx').on(table.status),
+])
+
+export const pageVersions = pgTable('page_versions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  pageId: uuid('page_id').notNull().references(() => pages.id, { onDelete: 'cascade' }),
+  versionNumber: integer('version_number').notNull(),
+  snapshot: jsonb('snapshot').notNull(),
+  note: text('note'),
+  createdBy: text('created_by'),
+  createdAt: createdAt(),
+}, (table) => [
+  uniqueIndex('page_versions_page_version_uidx').on(table.pageId, table.versionNumber),
+  index('page_versions_page_id_idx').on(table.pageId),
 ])
 
 export const sections = pgTable('sections', {
@@ -215,6 +260,7 @@ export const navigationItems = pgTable('navigation_items', {
   targetPageId: uuid('target_page_id').references(() => pages.id, { onDelete: 'set null' }),
   targetUrl: text('target_url'),
   footerColumnId: uuid('footer_column_id').references(() => footerColumns.id, { onDelete: 'set null' }),
+  parentId: uuid('parent_id').references((): AnyPgColumn => navigationItems.id, { onDelete: 'set null' }),
   sortOrder: integer('sort_order').notNull().default(0),
   isVisible: boolean('is_visible').notNull().default(true),
   createdAt: createdAt(),
@@ -263,6 +309,13 @@ export const products = pgTable('products', {
   description: text('description').notNull().default(''),
   price: numeric('price', { precision: 12, scale: 2 }).notNull(),
   currency: text('currency').notNull().default('PKR'),
+  comparePrice: numeric('compare_price', { precision: 12, scale: 2 }),
+  features: jsonb('features').notNull().default([]),
+  category: text('category').notNull().default(''),
+  ctaLabel: text('cta_label'),
+  whatsappMessage: text('whatsapp_message'),
+  showOnHomepage: boolean('show_on_homepage').notNull().default(false),
+  isPopular: boolean('is_popular').notNull().default(false),
   mediaId: uuid('media_id').references(() => mediaLibrary.id, { onDelete: 'set null' }),
   status: text('status').notNull().default('draft'),
   sortOrder: integer('sort_order').notNull().default(0),
@@ -280,11 +333,34 @@ export const services = pgTable('services', {
   title: text('title').notNull(),
   description: text('description').notNull().default(''),
   features: jsonb('features').notNull().default([]),
+  category: text('category').notNull().default(''),
+  icon: text('icon'),
+  ctaLabel: text('cta_label'),
+  whatsappMessage: text('whatsapp_message'),
+  showOnHomepage: boolean('show_on_homepage').notNull().default(false),
   sortOrder: integer('sort_order').notNull().default(0),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 }, (table) => [index('services_active_sort_idx').on(table.isActive, table.sortOrder)])
+
+export const whatsappSettings = pgTable('whatsapp_settings', {
+  id: integer('id').primaryKey().default(1),
+  widgetEnabled: boolean('widget_enabled').notNull().default(true),
+  defaultMessage: text('default_message').notNull().default('Hello! I visited your website and would like to inquire about your services.'),
+  visibility: text('visibility').notNull().default('all'),
+  hiddenPages: text('hidden_pages').notNull().default(''),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const whatsappNumbers = pgTable('whatsapp_numbers', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  label: text('label').notNull(),
+  phone: text('phone').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
 
 export const contactInquiries = pgTable('contact_inquiries', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -292,6 +368,7 @@ export const contactInquiries = pgTable('contact_inquiries', {
   email: text('email').notNull(),
   businessName: text('business_name'),
   phone: text('phone'),
+  subject: text('subject'),
   message: text('message').notNull(),
   requestedPackage: text('requested_package'),
   serviceId: uuid('service_id').references(() => services.id, { onDelete: 'set null' }),
@@ -304,6 +381,36 @@ export const contactInquiries = pgTable('contact_inquiries', {
   check('contact_inquiries_status_check', sql`${table.status} in ('new', 'viewed', 'replied', 'archived')`),
   index('contact_inquiries_status_created_idx').on(table.status, table.createdAt),
   index('contact_inquiries_email_idx').on(table.email),
+])
+
+export const orders = pgTable('orders', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  orderNumber: text('order_number').notNull().unique(),
+  customerName: text('customer_name').notNull(),
+  phoneNumber: text('phone_number').notNull(),
+  email: text('email'),
+  productId: uuid('product_id').references(() => products.id, { onDelete: 'set null' }),
+  planName: text('plan_name').notNull(),
+  planPrice: numeric('plan_price', { precision: 12, scale: 2 }).notNull(),
+  comparePrice: numeric('compare_price', { precision: 12, scale: 2 }),
+  discountAmount: numeric('discount_amount', { precision: 12, scale: 2 }).notNull().default('0'),
+  currency: text('currency').notNull().default('PKR'),
+  finalAmount: numeric('final_amount', { precision: 12, scale: 2 }).notNull(),
+  advanceAmount: numeric('advance_amount', { precision: 12, scale: 2 }).notNull().default('0'),
+  balanceAmount: numeric('balance_amount', { precision: 12, scale: 2 }).notNull().default('0'),
+  paymentMethod: text('payment_method').notNull(),
+  paymentStatus: text('payment_status').notNull().default('unpaid'),
+  orderStatus: text('order_status').notNull().default('pending'),
+  adminNotes: text('admin_notes'),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+}, (table) => [
+  check('orders_payment_method_check', sql`${table.paymentMethod} in ('cash', 'online')`),
+  check('orders_payment_status_check', sql`${table.paymentStatus} in ('unpaid', 'pending_verification', 'paid', 'failed', 'refunded')`),
+  check('orders_order_status_check', sql`${table.orderStatus} in ('pending', 'confirmed', 'in_progress', 'completed', 'cancelled')`),
+  check('orders_amounts_check', sql`${table.planPrice} >= 0 and ${table.finalAmount} >= 0`),
+  index('orders_created_idx').on(table.createdAt),
+  index('orders_status_idx').on(table.orderStatus, table.paymentStatus),
 ])
 
 export const loginAttempts = pgTable('login_attempts', {

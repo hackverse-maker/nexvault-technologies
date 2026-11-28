@@ -509,19 +509,41 @@ function ItemsEditor({
     onChange([...items, blank])
   }
 
+  function moveItem(index: number, dir: -1 | 1) {
+    const target = index + dir
+    if (target < 0 || target >= items.length) return
+    const next = [...items]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    onChange(next)
+  }
+
+  const miniBtn: React.CSSProperties = {
+    background: 'transparent',
+    border: '1px solid var(--line)',
+    color: '#8aa0b8',
+    borderRadius: 5,
+    padding: '3px 8px',
+    fontSize: 11,
+    cursor: 'pointer',
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {items.map((item, index) => (
         <div key={index} style={{ border: '1px solid var(--line)', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 10, background: 'rgba(2,8,23,.4)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 11, color: '#5f7a99', fontWeight: 700 }}>Item {index + 1}</span>
-            <button
-              type="button"
-              onClick={() => onChange(items.filter((_, i) => i !== index))}
-              style={{ background: 'none', border: 'none', color: '#f0a3a3', cursor: 'pointer', fontSize: 11 }}
-            >
-              Remove
-            </button>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <button type="button" onClick={() => moveItem(index, -1)} disabled={index === 0} style={{ ...miniBtn, opacity: index === 0 ? 0.4 : 1 }} title="Move up">↑</button>
+              <button type="button" onClick={() => moveItem(index, 1)} disabled={index === items.length - 1} style={{ ...miniBtn, opacity: index === items.length - 1 ? 0.4 : 1 }} title="Move down">↓</button>
+              <button
+                type="button"
+                onClick={() => onChange(items.filter((_, i) => i !== index))}
+                style={{ background: 'none', border: 'none', color: '#f0a3a3', cursor: 'pointer', fontSize: 11 }}
+              >
+                Remove
+              </button>
+            </div>
           </div>
           {itemFields.map((f) => (
             <div key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>

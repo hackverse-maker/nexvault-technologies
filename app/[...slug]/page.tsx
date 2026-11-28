@@ -5,6 +5,7 @@ import { DynamicSections } from '@/components/site/section-renderer'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
 import { PageHero } from '@/components/site/page-hero'
+import { breadcrumbJsonLd, JsonLd } from '@/lib/seo'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,6 +27,7 @@ export default async function DynamicPage({ params }: { params: Promise<Params> 
 
   return (
     <main className="site-shell">
+      <JsonLd data={breadcrumbJsonLd([{ name: 'Home', path: '/' }, { name: page.title, path: `/${slugPath}` }])} />
       <SiteHeader />
       {!hasHero && (
         <PageHero

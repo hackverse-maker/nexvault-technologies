@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { LucideIcon } from 'lucide-react'
 import { ArrowRight } from 'lucide-react'
+import { iconForTitle } from '@/lib/icons'
 
 export function SectionHeading({
   eyebrow,
@@ -33,9 +34,10 @@ export function ServiceCard({
   href?: string
   features?: string[]
 }) {
+  const ResolvedIcon = Icon ?? iconForTitle(title)
   const content = (
     <>
-      <div className="service-icon">{Icon ? <Icon size={21} /> : <ArrowRight size={21} />}</div>
+      <div className="service-icon"><ResolvedIcon size={23} strokeWidth={2} /></div>
       <h3>{title}</h3>
       <p>{text}</p>
       {features && features.length > 0 && (

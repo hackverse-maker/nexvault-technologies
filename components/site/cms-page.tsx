@@ -7,6 +7,7 @@ import { SiteHeader } from './site-header'
 import { SiteFooter } from './site-footer'
 import { DynamicSections } from './section-renderer'
 import { PageHero } from './page-hero'
+import { breadcrumbJsonLd, JsonLd, pageMetadata } from '@/lib/seo'
 
 export async function getPublishedPage(slug: string) {
   try {
@@ -14,6 +15,19 @@ export async function getPublishedPage(slug: string) {
       where: and(eq(pages.slug, slug), eq(pages.status, 'published')),
     })
     if (!page) return null
+
+    // Published snapshot = what visitors see. Draft section edits stay private
+    // until an admin publishes. Pages without a snapshot (legacy) fall back to
+    // rendering live sections.
+    const snapshot = page.publishedSnapshot
+    if (Array.isArray(snapshot) && snapshot.length > 0) {
+      const snapSections = (snapshot as { id: string; sectionType: string; content: unknown; sortOrder: number; isVisible?: boolean }[])
+        .filter((s) => s.isVisible !== false)
+        .slice()
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+      return { page, pageSections: snapSections }
+    }
+
     const pageSections = await db.query.sections.findMany({
       where: and(eq(sections.pageId, page.id), eq(sections.isVisible, true)),
       orderBy: [asc(sections.sortOrder)],
@@ -27,12 +41,14 @@ export async function getPublishedPage(slug: string) {
 
 export async function getCmsMetadata(slug: string): Promise<Metadata> {
   const result = await getPublishedPage(slug)
-  if (!result) return { title: 'Page not found — NexVault Technologies' }
+  if (!result) return pageMetadata({ title: 'Page not found', path: `/${slug}` })
   const { page } = result
-  return {
-    title: page.seoTitle || `${page.title} — NexVault Technologies`,
-    description: page.seoDescription || undefined,
-  }
+  return pageMetadata({
+    title: page.seoTitle || page.title,
+    description: page.seoDescription,
+    path: `/${page.slug}`,
+    image: page.ogImage,
+  })
 }
 
 export async function CmsPage({ slug, contactPackage }: { slug: string; contactPackage?: string }) {
@@ -44,6 +60,7 @@ export async function CmsPage({ slug, contactPackage }: { slug: string; contactP
 
   return (
     <main className="site-shell">
+      <JsonLd data={breadcrumbJsonLd([{ name: 'Home', path: '/' }, { name: page.title, path: `/${page.slug}` }])} />
       <SiteHeader />
       {!hasHero && (
         <PageHero

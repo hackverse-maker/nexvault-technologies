@@ -1,0 +1,15 @@
+import { config } from 'dotenv'
+config({ path: '.env.local' })
+import pg from 'pg'
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
+const ci = await pool.query('select * from contact_information')
+console.log('contact_information:', JSON.stringify(ci.rows, null, 1))
+const sn = await pool.query('select platform,label,url,is_visible from social_media_links order by sort_order')
+console.log('socials:', JSON.stringify(sn.rows, null, 1))
+const hs = await pool.query('select * from header_settings')
+console.log('header_settings:', JSON.stringify(hs.rows, null, 1))
+const ws = await pool.query('select * from whatsapp_settings')
+console.log('whatsapp_settings:', JSON.stringify(ws.rows, null, 1))
+const wn = await pool.query('select label,phone,is_active from whatsapp_numbers')
+console.log('whatsapp_numbers:', JSON.stringify(wn.rows, null, 1))
+await pool.end()

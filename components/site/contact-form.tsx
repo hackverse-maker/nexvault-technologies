@@ -4,19 +4,31 @@ import { useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { services } from '@/lib/site-data'
 
-const packages = ['Silver package', 'Gold package', 'Platinum package']
+const fallbackPackages = ['Silver package', 'Gold package', 'Platinum package']
 
 export function ContactForm({
   defaultPackage,
   compact = false,
+  serviceOptions,
+  packageOptions,
 }: {
   defaultPackage?: string
   compact?: boolean
+  serviceOptions?: string[]
+  packageOptions?: string[]
 }) {
+  const serviceList = serviceOptions ?? services.map((s) => s.title)
+  const packageList = packageOptions ?? fallbackPackages
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadedAt] = useState(() => Date.now())
   const [selected, setSelected] = useState(defaultPackage ?? '')
+  const norm = (s: string) => s.trim().toLowerCase()
+  const resolvedPackage =
+    packageList.find((p) => norm(p) === norm(selected)) ??
+    packageList.find((p) => norm(p).startsWith(`${norm(selected)} `)) ??
+    ''
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -24,6 +36,7 @@ export function ContactForm({
     setError('')
     const form = event.currentTarget
     const data = Object.fromEntries(new FormData(form).entries())
+    data.ts = String(loadedAt)
     try {
       const res = await fetch('/api/contact', {
         method: 'POST',
@@ -84,23 +97,27 @@ export function ContactForm({
       </div>
       <div className="form-row">
         <label>
+          Subject
+          <input name="subject" placeholder="What is this about?" maxLength={200} />
+        </label>
+        <label>
           Required service
           <select required name="service" defaultValue="">
             <option value="" disabled>
               Select a service
             </option>
-            {services.map((s) => (
-              <option key={s.slug} value={s.title}>
-                {s.title}
+            {serviceList.map((title) => (
+              <option key={title} value={title}>
+                {title}
               </option>
             ))}
           </select>
         </label>
         <label>
           Package selection
-          <select name="package" value={selected} onChange={(e) => setSelected(e.target.value)}>
+          <select name="package" value={resolvedPackage || selected} onChange={(e) => setSelected(e.target.value)}>
             <option value="">I&apos;m not sure yet</option>
-            {packages.map((p) => (
+            {packageList.map((p) => (
               <option key={p}>{p}</option>
             ))}
           </select>

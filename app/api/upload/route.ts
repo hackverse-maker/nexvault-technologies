@@ -1,9 +1,15 @@
 import { handleUpload } from '@vercel/blob/client'
 import { MAX_UPLOAD_BYTES } from '@/lib/media'
+import { getAdminSession } from '@/lib/auth/session'
 
 export const runtime = 'nodejs'
 
 export async function POST(request: Request) {
+  const session = await getAdminSession()
+  if (!session) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const body = await request.json()
 
   try {

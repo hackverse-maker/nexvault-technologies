@@ -24,6 +24,11 @@ export default async function AdminHeaderPage() {
     return page ? `/${page.slug}` : '—'
   }
 
+  const parentLabel = (id: string | null) => items.find((i) => i.id === id)?.label ?? null
+  // Only top-level items can be parents (no nested dropdowns).
+  const topLevel = items.filter((i) => !i.parentId)
+  const parentOptions = topLevel.map((i) => ({ id: i.id, label: i.label }))
+
   return (
     <>
       <PageHeader title="Header Management" description="Logo, CTA button, WhatsApp button, and main navigation — changes go live on every page immediately." />
@@ -71,7 +76,7 @@ export default async function AdminHeaderPage() {
               </thead>
               <tbody>
                 {items.map((item, index) => (
-                  <tr key={item.id}>
+                  <tr key={item.id} style={item.parentId ? { background: 'rgba(0,200,255,.03)' } : undefined}>
                     <td style={tdStyle}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <form action={moveNavItemAction}>
@@ -89,10 +94,16 @@ export default async function AdminHeaderPage() {
                       </div>
                     </td>
                     <td style={tdStyle}>
-                      {item.label}
+                      <span style={{ paddingLeft: item.parentId ? 18 : 0, display: 'inline-block' }}>
+                        {item.parentId && <span style={{ color: '#5f7a99', marginRight: 6 }}>↳</span>}
+                        {item.label}
+                        {item.parentId && (
+                          <span style={{ display: 'block', fontSize: 10, color: '#5f7a99' }}>in {parentLabel(item.parentId)} dropdown</span>
+                        )}
+                      </span>
                       <details style={{ marginTop: 8 }}>
                         <summary style={{ color: 'var(--cyan)', fontSize: 11, cursor: 'pointer' }}>Edit</summary>
-                        <NavItemForm item={item} allPages={allPages} location="header" compact />
+                        <NavItemForm item={item} allPages={allPages} location="header" compact parentOptions={parentOptions} />
                       </details>
                     </td>
                     <td style={tdStyle}><code style={{ fontSize: 11, color: '#70ddff' }}>{targetLabel(item)}</code></td>
@@ -112,7 +123,7 @@ export default async function AdminHeaderPage() {
 
         <Card>
           <h2 style={{ fontSize: 15, margin: '0 0 16px' }}>Add navigation item</h2>
-          <NavItemForm allPages={allPages} location="header" />
+          <NavItemForm allPages={allPages} location="header" parentOptions={parentOptions} />
         </Card>
       </div>
     </>
@@ -124,11 +135,13 @@ function NavItemForm({
   allPages,
   location,
   compact = false,
+  parentOptions = [],
 }: {
-  item?: { id: string; label: string; sortOrder: number; isVisible: boolean; targetUrl: string | null; targetPageId: string | null }
+  item?: { id: string; label: string; sortOrder: number; isVisible: boolean; targetUrl: string | null; targetPageId: string | null; parentId?: string | null }
   allPages: { id: string; title: string; slug: string }[]
   location: 'header' | 'footer'
   compact?: boolean
+  parentOptions?: { id: string; label: string }[]
 }) {
   return (
     <form
@@ -145,6 +158,14 @@ function NavItemForm({
         </select>
       </label>
       <label style={labelStyle}>…or custom URL<input name="targetUrl" defaultValue={item?.targetUrl ?? ''} placeholder="/pricing or https://…" style={inputStyle} /></label>
+      {location === 'header' && parentOptions.length > 0 && (
+        <label style={labelStyle}>Parent menu (optional — creates a dropdown)
+          <select name="parentId" defaultValue={item?.parentId ?? ''} style={inputStyle}>
+            <option value="">Top-level item</option>
+            {parentOptions.filter((p) => p.id !== item?.id).map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+          </select>
+        </label>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <label style={labelStyle}>Sort order<input name="sortOrder" type="number" defaultValue={item?.sortOrder ?? 0} style={inputStyle} /></label>
         <label style={labelStyle}>Visible

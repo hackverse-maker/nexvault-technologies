@@ -11,11 +11,14 @@ import {
   navigationItems,
   pages,
   socialMediaLinks,
+  whatsappNumbers,
+  whatsappSettings,
 } from '@/lib/db/schema'
 import { contact } from '@/lib/contact'
 import { navigation, footerLinks, footerServices } from '@/lib/site-data'
+import { digitsOnly } from '@/lib/whatsapp'
 
-export type ChromeNavItem = { label: string; href: string }
+export type ChromeNavItem = { label: string; href: string; children?: ChromeNavItem[] }
 export type FooterColumnData = { id: string; title: string; links: ChromeNavItem[] }
 
 export type HeaderData = {
@@ -24,6 +27,7 @@ export type HeaderData = {
   ctaLabel: string
   ctaHref: string
   whatsappUrl: string | null
+  whatsappMessage: string
 }
 
 export type FooterData = {
@@ -36,6 +40,14 @@ export type FooterData = {
   socials: { label: string; href: string }[]
   contactLine: string | null
   whatsappUrl: string
+  whatsapp: {
+    number: string
+    defaultMessage: string
+    widgetEnabled: boolean
+    visibility: string
+    hiddenPaths: string[]
+    numbers: { id: string; label: string; phone: string }[]
+  }
 }
 
 const FALLBACK_HEADER: HeaderData = {
@@ -44,6 +56,7 @@ const FALLBACK_HEADER: HeaderData = {
   ctaLabel: 'Get a free quote',
   ctaHref: '/get-a-quote',
   whatsappUrl: contact.whatsappUrl,
+  whatsappMessage: 'Hello! I visited your website and would like to inquire about your services.',
 }
 
 function fallbackFooter(): FooterData {
@@ -64,6 +77,14 @@ function fallbackFooter(): FooterData {
     ],
     contactLine: contact.email,
     whatsappUrl: contact.whatsappUrl,
+    whatsapp: {
+      number: digitsOnly(contact.whatsappNumber),
+      defaultMessage: 'Hello! I visited your website and would like to inquire about your services.',
+      widgetEnabled: true,
+      visibility: 'all',
+      hiddenPaths: [],
+      numbers: [],
+    },
   }
 }
 
@@ -80,19 +101,36 @@ async function navHrefs(items: { targetPageId: string | null; targetUrl: string 
 
 export async function getHeaderData(): Promise<HeaderData> {
   try {
-    const [settings, items, contactRow] = await Promise.all([
+    const [settings, items, contactRow, waSettings] = await Promise.all([
       db.query.headerSettings.findFirst({ where: eq(headerSettings.id, 1) }),
       db.query.navigationItems.findMany({
         where: and(eq(navigationItems.location, 'header'), eq(navigationItems.isVisible, true)),
         orderBy: [asc(navigationItems.sortOrder)],
       }),
       db.query.contactInformation.findFirst({ where: eq(contactInformation.id, 1) }),
+      db.query.whatsappSettings.findFirst({ where: eq(whatsappSettings.id, 1) }),
     ])
 
     const hrefs = await navHrefs(items)
-    const navItems = items
-      .map((item, i) => ({ label: item.label, href: hrefs[i] }))
+    const links = items
+      .map((item, i) => ({ id: item.id, label: item.label, href: hrefs[i], parentId: item.parentId }))
       .filter((i) => i.href !== '#')
+    const linkById = new Map(links.map((l) => [l.id, l]))
+
+    // Top-level items render as links; children attach to their parent as a dropdown.
+    const childrenByParent = new Map<string, ChromeNavItem[]>()
+    for (const child of links) {
+      if (!child.parentId || !linkById.has(child.parentId)) continue
+      const list = childrenByParent.get(child.parentId) ?? []
+      list.push({ label: child.label, href: child.href })
+      childrenByParent.set(child.parentId, list)
+    }
+    const navItems: ChromeNavItem[] = links
+      .filter((l) => !l.parentId || !linkById.has(l.parentId))
+      .map((p) => {
+        const kids = childrenByParent.get(p.id)
+        return { label: p.label, href: p.href, ...(kids?.length ? { children: kids } : {}) }
+      })
 
     let logoUrl: string | null = null
     if (settings?.logoMediaId) {
@@ -101,16 +139,18 @@ export async function getHeaderData(): Promise<HeaderData> {
     }
 
     const whatsappNumber =
-      settings?.whatsappNumber?.replace(/\D/g, '') ||
-      contactRow?.whatsappNumber?.replace(/\D/g, '') ||
-      contact.whatsappNumber
+      digitsOnly(contactRow?.whatsappNumber) ||
+      digitsOnly(settings?.whatsappNumber) ||
+      digitsOnly(contact.whatsappNumber)
+    const whatsappMessage = waSettings?.defaultMessage?.trim() || FALLBACK_HEADER.whatsappMessage
 
     return {
       logoUrl,
       navItems: navItems.length ? navItems : FALLBACK_HEADER.navItems,
       ctaLabel: settings?.ctaLabel || FALLBACK_HEADER.ctaLabel,
       ctaHref: settings?.ctaHref || FALLBACK_HEADER.ctaHref,
-      whatsappUrl: settings?.whatsappEnabled === false ? null : `https://wa.me/${whatsappNumber}`,
+      whatsappUrl: settings?.whatsappEnabled === false ? null : `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}`,
+      whatsappMessage,
     }
   } catch {
     return FALLBACK_HEADER
@@ -119,7 +159,7 @@ export async function getHeaderData(): Promise<HeaderData> {
 
 export async function getFooterData(): Promise<FooterData> {
   try {
-    const [config, columns, items, socials, contactRow] = await Promise.all([
+    const [config, columns, items, socials, contactRow, waSettings, waNumbers] = await Promise.all([
       db.query.footerConfiguration.findFirst({ where: eq(footerConfiguration.id, 1) }),
       db.query.footerColumns.findMany({
         where: eq(footerColumns.isVisible, true),
@@ -134,6 +174,11 @@ export async function getFooterData(): Promise<FooterData> {
         orderBy: [asc(socialMediaLinks.sortOrder)],
       }),
       db.query.contactInformation.findFirst({ where: eq(contactInformation.id, 1) }),
+      db.query.whatsappSettings.findFirst({ where: eq(whatsappSettings.id, 1) }),
+      db.query.whatsappNumbers.findMany({
+        where: eq(whatsappNumbers.isActive, true),
+        orderBy: [asc(whatsappNumbers.sortOrder), asc(whatsappNumbers.label)],
+      }),
     ])
 
     const hrefs = await navHrefs(items)
@@ -177,9 +222,19 @@ export async function getFooterData(): Promise<FooterData> {
       columns: finalColumns.length ? finalColumns : fallback.columns,
       socials: socials.length > 0 ? socials.map((s) => ({ label: s.label, href: s.url })) : fallback.socials,
       contactLine: contactRow?.businessEmail || contact.email,
-      whatsappUrl: contactRow?.whatsappNumber
-        ? `https://wa.me/${contactRow.whatsappNumber.replace(/\D/g, '')}`
-        : contact.whatsappUrl,
+      whatsappUrl: (() => {
+        const num = digitsOnly(contactRow?.whatsappNumber) || digitsOnly(contact.whatsappNumber)
+        const msg = waSettings?.defaultMessage?.trim() || FALLBACK_HEADER.whatsappMessage
+        return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
+      })(),
+      whatsapp: {
+        number: digitsOnly(contactRow?.whatsappNumber) || digitsOnly(contact.whatsappNumber),
+        defaultMessage: waSettings?.defaultMessage?.trim() || FALLBACK_HEADER.whatsappMessage,
+        widgetEnabled: waSettings?.widgetEnabled ?? true,
+        visibility: waSettings?.visibility === 'exclude' ? 'exclude' : 'all',
+        hiddenPaths: (waSettings?.hiddenPages ?? '').split(',').map((p) => p.trim()).filter(Boolean),
+        numbers: waNumbers.map((n) => ({ id: n.id, label: n.label, phone: digitsOnly(n.phone) })),
+      },
     }
   } catch {
     return fallbackFooter()

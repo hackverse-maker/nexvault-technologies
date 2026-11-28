@@ -47,7 +47,7 @@ export function getPost(slug: string) { return posts.find((post) => post.slug ==
 export const Icon = { Code2 }
 
 export const allCategories = ['All Projects', 'Business Websites', 'E-commerce', 'UI/UX', 'Branding', 'Digital Campaigns']
-export const processSteps = ['Discover', 'Plan', 'Design', 'Develop', 'Launch', 'Grow']
+export const processSteps = ['Discover', 'Plan', 'Design', 'Development', 'Launch', 'Grow']
 
 export const logoMark = '<path d="M5 17V7.8L8.1 5l3.9 3.3L15 5v12l-3-2.5L8.1 17V9.9L5 7.8" />'
 

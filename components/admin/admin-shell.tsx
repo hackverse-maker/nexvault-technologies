@@ -18,6 +18,10 @@ import {
   Package,
   Wrench,
   Inbox,
+  MessageCircle,
+  Receipt,
+  Newspaper,
+  Palette,
   X,
 } from 'lucide-react'
 import { Logo } from '@/components/site/logo'
@@ -28,12 +32,16 @@ const navItems = [
   { href: '/admin/pages', label: 'Pages Management', icon: FileText },
   { href: '/admin/sections', label: 'Section Management', icon: LayoutList },
   { href: '/admin/business', label: 'Business Information', icon: Building2 },
+  { href: '/admin/whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { href: '/admin/settings', label: 'Website Settings', icon: Settings },
   { href: '/admin/header', label: 'Header Management', icon: PanelTop },
   { href: '/admin/footer', label: 'Footer Management', icon: PanelBottom },
   { href: '/admin/media', label: 'Media Library', icon: ImageIcon },
   { href: '/admin/products', label: 'Products Management', icon: Package },
   { href: '/admin/services', label: 'Services Management', icon: Wrench },
+  { href: '/admin/orders', label: 'Orders', icon: Receipt },
+  { href: '/admin/blog', label: 'Blog Manager', icon: Newspaper },
+  { href: '/admin/design', label: 'Design Settings', icon: Palette },
   { href: '/admin/inquiries', label: 'Contact Inquiries', icon: Inbox },
   { href: '/admin/seo', label: 'SEO Management', icon: Search },
 ]

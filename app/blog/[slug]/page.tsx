@@ -5,20 +5,22 @@ import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
 import { PageHero } from '@/components/site/page-hero'
 import { CtaBand } from '@/components/site/cta-band'
-import { posts, getPost } from '@/lib/site-data'
+import { posts } from '@/lib/site-data'
+import { getBlogPost } from '@/lib/blog'
+import { pageMetadata } from '@/lib/seo'
 
-export function generateStaticParams() {
-  return posts.map((post) => ({ slug: post.slug }))
-}
+export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const post = getPost(slug)
-  if (!post) return { title: 'Article — NexVault Technologies' }
-  return {
-    title: `${post.title} — NexVault Technologies`,
-    description: post.excerpt,
-  }
+  const post = await getBlogPost(slug)
+  if (!post) return pageMetadata({ title: 'Article not found', path: `/blog/${slug}` })
+  return pageMetadata({
+    title: post.seoTitle || post.title,
+    description: post.seoDescription || post.excerpt,
+    path: `/blog/${post.slug}`,
+    image: post.image || images[post.slug],
+  })
 }
 
 const images: Record<string, string> = {
@@ -96,17 +98,18 @@ const articleSections: Record<string, Section[]> = {
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const post = getPost(slug)
+  const post = await getBlogPost(slug)
   if (!post) notFound()
 
   const related = posts.filter((p) => p.slug !== post.slug)
-  const sections = articleSections[post.slug] ?? []
+  const sections = post.sections.length ? post.sections : articleSections[post.slug] ?? []
+  const postImage = post.image || images[post.slug] || images['website-that-works-harder']
 
   return (
     <main className="site-shell">
       <SiteHeader />
 
-      <PageHero eyebrow={post.category} title={post.title} intro={post.excerpt}>
+      <PageHero eyebrow={post.category} title={post.title} intro={post.excerpt} image={post.image || images[post.slug]}>
         <p style={{ color: 'var(--muted)', fontSize: 13 }}>
           {post.date} · {post.read}
         </p>
@@ -121,7 +124,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <div className="container" style={{ maxWidth: 860 }}>
           <div style={{ border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden', marginBottom: 48 }}>
             <img
-              src={images[post.slug] ?? images['website-that-works-harder']}
+              src={postImage}
               alt={post.title}
               loading="lazy"
               style={{ width: '100%', height: 'auto', maxHeight: 460, objectFit: 'cover', display: 'block' }}

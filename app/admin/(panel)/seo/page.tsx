@@ -1,6 +1,6 @@
 import { asc } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { pages, websiteSettings } from '@/lib/db/schema'
+import { mediaLibrary, pages, websiteSettings } from '@/lib/db/schema'
 import { PageHeader, Card, Badge, inputStyle, labelStyle, thStyle, tdStyle } from '@/components/admin/ui'
 import { updatePageAction } from '../actions'
 
@@ -10,6 +10,8 @@ export const metadata = { title: 'SEO — NexVault Admin' }
 export default async function AdminSeoPage() {
   const allPages = await db.query.pages.findMany({ orderBy: [asc(pages.title)] })
   const settings = await db.query.websiteSettings.findFirst()
+  const media = await db.query.mediaLibrary.findMany({ orderBy: [asc(mediaLibrary.originalName)] })
+  const mediaOptions = media.map((m) => ({ id: m.id, label: m.originalName, url: `/api/img/${m.id}` }))
 
   return (
     <>
@@ -41,7 +43,7 @@ export default async function AdminSeoPage() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr>{['Page', 'SEO title', 'SEO description', 'Status'].map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr>
+                <tr>{['Page', 'SEO title', 'SEO description', 'OG image', 'Status', ''].map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr>
               </thead>
               <tbody>
                 {allPages.map((page) => (
@@ -56,6 +58,14 @@ export default async function AdminSeoPage() {
                     <td style={{ ...tdStyle, maxWidth: 240 }}>
                       <p style={{ margin: 0, fontSize: 12, color: '#8aa0b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.seoDescription || '—'}</p>
                     </td>
+                    <td style={tdStyle}>
+                      {page.ogImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={page.ogImage} alt="" style={{ width: 72, height: 40, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--line)' }} />
+                      ) : (
+                        <span style={{ color: '#5f7a99', fontSize: 11 }}>Default</span>
+                      )}
+                    </td>
                     <td style={tdStyle}><Badge tone={page.status === 'published' ? 'green' : page.status === 'draft' ? 'amber' : 'slate'}>{page.status}</Badge></td>
                     <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                       <details>
@@ -64,8 +74,15 @@ export default async function AdminSeoPage() {
                           <input type="hidden" name="id" value={page.id} />
                           <input type="hidden" name="title" value={page.title} />
                           <input type="hidden" name="status" value={page.status} />
+                          <label style={labelStyle}>Slug<input name="slug" defaultValue={page.slug} style={inputStyle} /></label>
                           <input name="seoTitle" defaultValue={page.seoTitle ?? ''} placeholder="SEO title (max ~60 chars)" style={inputStyle} />
                           <textarea name="seoDescription" rows={2} defaultValue={page.seoDescription ?? ''} placeholder="SEO description (max ~160 chars)" style={{ ...inputStyle, resize: 'vertical' }} />
+                          <label style={labelStyle}>Social sharing image (OG)
+                            <select name="ogImage" defaultValue={page.ogImage ?? ''} style={inputStyle}>
+                              <option value="">— Default —</option>
+                              {mediaOptions.map((m) => <option key={m.id} value={m.url}>{m.label}</option>)}
+                            </select>
+                          </label>
                           <button className="button primary" type="submit" style={{ fontSize: 12, padding: '10px 14px' }}>Save SEO</button>
                         </form>
                       </details>
@@ -73,7 +90,7 @@ export default async function AdminSeoPage() {
                   </tr>
                 ))}
                 {allPages.length === 0 && (
-                  <tr><td style={tdStyle} colSpan={5}>No pages yet — create them in Pages Management.</td></tr>
+                  <tr><td style={tdStyle} colSpan={6}>No pages yet — create them in Pages Management.</td></tr>
                 )}
               </tbody>
             </table>

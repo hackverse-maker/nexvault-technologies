@@ -2,43 +2,63 @@ import Link from 'next/link'
 import {
   ArrowRight,
   Check,
-  Code2,
-  Globe2,
-  Palette,
-  Search,
+  MessageCircle,
+  Phone,
   Star,
-  Target,
   Wrench,
   Zap,
   ShieldCheck,
-  MessageCircle,
   Mail,
 } from 'lucide-react'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'
 import { ContactForm } from '@/components/site/contact-form'
 import { HeroBackdrop } from '@/components/site/hero-backdrop'
+import { ProcessTimeline } from '@/components/site/process-timeline'
 import { contact } from '@/lib/contact'
-import { packages } from '@/lib/packages'
 import { getPublicHeroSlides } from '@/lib/sliders'
-
-const services = [
-  { icon: Code2, title: 'Website Development', text: 'Fast, responsive websites that turn attention into action.' },
-  { icon: Palette, title: 'UI/UX Design', text: 'Premium interfaces that make your brand feel credible and clear.' },
-  { icon: Search, title: 'SEO & Visibility', text: 'Search-ready foundations that help the right people find you.' },
-  { icon: Target, title: 'Digital Marketing', text: 'Focused campaigns and content built around business goals.' },
-  { icon: Globe2, title: 'Business Setup', text: 'Domain, hosting, email and Google Business Profile handled.' },
-  { icon: Wrench, title: 'Maintenance & Support', text: 'A reliable technical partner long after launch day.' },
-]
+import {
+  getCatalogProducts,
+  getCatalogServices,
+  productFeatures,
+  productInquiryFallback,
+  productPrice,
+  serviceIconFor,
+  serviceInquiryFallback,
+  whatsappInquiryUrl,
+} from '@/lib/catalog'
+import { getWhatsAppConfig } from '@/lib/whatsapp'
+import { getPortfolioProjects } from '@/lib/projects'
+import { MediaImg } from '@/components/site/media-image'
+import { JsonLd, organizationJsonLd, websiteJsonLd } from '@/lib/seo'
+import type { Metadata } from 'next'
 
 function SectionHeading({ eyebrow, title, text }: { eyebrow: string; title: string; text: string }) {
   return <div className="section-heading"><p className="eyebrow">{eyebrow}</p><h2>{title}</h2><p className="section-intro">{text}</p></div>
 }
 
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+  openGraph: { title: 'NexVault Technologies | Build. Rank. Grow.', url: '/' },
+}
+
 export default async function Home() {
-  const hero = await getPublicHeroSlides()
+  const [hero, homeServices, packages, maintenance, catalogServices, catalogProducts, waConfig, portfolioProjects] = await Promise.all([
+    getPublicHeroSlides(),
+    getCatalogServices({ homepageOnly: true }),
+    getCatalogProducts({ homepageOnly: true, category: 'website-package' }),
+    getCatalogProducts({ category: 'maintenance' }),
+    getCatalogServices(),
+    getCatalogProducts(),
+    getWhatsAppConfig(),
+    getPortfolioProjects(),
+  ])
+  const serviceList = homeServices.slice(0, 6)
+  const serviceTitles = catalogServices.map((s) => s.title)
+  const packageNames = catalogProducts.map((p) => p.name)
   return (
     <main id="top" className="site-shell">
+      <JsonLd data={[organizationJsonLd(), websiteJsonLd()]} />
       <SiteHeader />
 
       <section className="hero">
@@ -84,24 +104,27 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="trust-strip">
-        <div className="container trust-inner">
-          <span>Strategy</span><span>Design</span><span>Development</span><span>Visibility</span><span>Growth</span>
-        </div>
-      </section>
+      <ProcessTimeline />
 
       <section id="services" className="section">
         <div className="container">
           <SectionHeading eyebrow="What we do" title="Everything your business needs to move forward." text="No bloated retainers or one-size-fits-all thinking. Just the right mix of strategy, craft, and technology for your next stage." />
           <div className="service-grid">
-            {services.map(({ icon: Icon, title, text }) => (
-              <article className="service-card" key={title}>
-                <div className="service-icon"><Icon size={21} /></div>
-                <h3>{title}</h3>
-                <p>{text}</p>
-                <Link href="/services" aria-label={`Learn more about ${title}`}>Learn more <ArrowRight size={14} /></Link>
-              </article>
-            ))}
+            {serviceList.map((service) => {
+              const Icon = serviceIconFor(service)
+              const wa = whatsappInquiryUrl(service.whatsappMessage ?? serviceInquiryFallback(service.title), waConfig.number)
+              return (
+                <article className="service-card" key={service.id}>
+                  <div className="service-icon"><Icon size={23} strokeWidth={2} /></div>
+                  <h3>{service.title}</h3>
+                  <p>{service.description}</p>
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginTop: 16 }}>
+                    <Link href={`/services/${service.slug}`} aria-label={`Learn more about ${service.title}`}>Learn more <ArrowRight size={14} /></Link>
+                    {wa && <a href={wa} target="_blank" rel="noopener noreferrer" aria-label={`WhatsApp about ${service.title}`}><MessageCircle size={14} /></a>}
+                  </div>
+                </article>
+              )
+            })}
           </div>
         </div>
       </section>
@@ -112,28 +135,26 @@ export default async function Home() {
             <SectionHeading eyebrow="Selected work" title="Digital presence, with a point of view." text="A few directions we&apos;ve explored for businesses ready to be taken seriously online." />
             <Link href="/portfolio" className="text-link">View all work <ArrowRight size={16} /></Link>
           </div>
-          <div className="work-grid">
-            <article className="work-card work-large">
-              <div className="work-art art-blue">
-                <div className="mock-browser">
-                  <div className="browser-bar"><span /><span /><span /></div>
-                  <div className="browser-content"><div className="mock-line wide" /><div className="mock-line" /><div className="mock-button" /><div className="mock-blocks"><i /><i /><i /></div></div>
+          <div className="home-work-grid">
+            {portfolioProjects.slice(0, 4).map((project) => (
+              <article className="work-card" key={project.slug}>
+                <Link href={`/portfolio/${project.slug}`} className="work-media" aria-label={`View ${project.title}`}>
+                  {project.image ? (
+                    <MediaImg src={project.image} alt={project.title} />
+                  ) : (
+                    <div className="work-art art-blue" />
+                  )}
+                </Link>
+                <div className="work-meta">
+                  <div>
+                    <p>{project.category}</p>
+                    <h3>{project.title}</h3>
+                    {project.description && <p className="work-desc">{project.description}</p>}
+                  </div>
+                  <Link href={`/portfolio/${project.slug}`} aria-label={`View project ${project.title}`}><ArrowRight size={20} /></Link>
                 </div>
-              </div>
-              <div className="work-meta">
-                <div><p>01 / Business website</p><h3>Make a stronger first impression.</h3></div>
-                <Link href="/portfolio" aria-label="View project"><ArrowRight size={20} /></Link>
-              </div>
-            </article>
-            <article className="work-card">
-              <div className="work-art art-purple">
-                <div className="phone-mock"><div className="phone-notch" /><div className="mock-line wide" /><div className="mock-line" /><div className="mock-button purple" /><i /><i /></div>
-              </div>
-              <div className="work-meta">
-                <div><p>02 / Digital campaign</p><h3>Turn attention into momentum.</h3></div>
-                <Link href="/portfolio" aria-label="View project"><ArrowRight size={20} /></Link>
-              </div>
-            </article>
+              </article>
+            ))}
           </div>
         </div>
       </section>
@@ -142,24 +163,32 @@ export default async function Home() {
         <div className="container">
           <SectionHeading eyebrow="Website packages" title="A professional start, without the guesswork." text="Choose the level that fits your ambition. Every package is built to get your business online with clarity and confidence." />
           <div className="pricing-grid">
-            {packages.map((pkg) => (
-              <article className={`price-card ${pkg.tone} ${pkg.popular ? 'popular' : ''}`} key={pkg.name}>
-                {pkg.popular && <div className="popular-label"><Star size={13} fill="currentColor" /> Most popular</div>}
-                <div className="price-head"><p>{pkg.name}</p><span>{pkg.label}</span></div>
-                <div className="price-old">{pkg.old}</div>
-                <div className="price-value">{pkg.price}</div>
-                <div className="advance">30% advance: {pkg.advance}</div>
-                <ul>{pkg.features.map((feature) => <li key={feature}><Check size={15} /> {feature}</li>)}</ul>
-                <Link className="button price-button" href={`/get-a-quote?package=${pkg.name}`}>Get started <ArrowRight size={16} /></Link>
-              </article>
-            ))}
+            {packages.map((pkg, i) => {
+              const tone = i === 1 ? 'gold popular' : i === 2 ? 'platinum' : 'silver'
+              const features = productFeatures(pkg.features)
+              const waHref = whatsappInquiryUrl(pkg.whatsappMessage ?? productInquiryFallback(pkg.name), waConfig.number)
+              return (
+                <article className={`price-card ${tone}`} key={pkg.id}>
+                  {pkg.isPopular && <div className="popular-label"><Star size={13} fill="currentColor" /> Most popular</div>}
+                  <div className="price-head"><p>{pkg.name}</p><span>{pkg.category || 'Package'}</span></div>
+                  {pkg.comparePrice && <div className="price-old">{productPrice({ price: String(pkg.comparePrice), currency: pkg.currency })}</div>}
+                  <div className="price-value">{productPrice(pkg)}</div>
+                  <ul>
+                    {features.map((feature) => <li key={feature}><Check size={15} /> {feature}</li>)}
+                    {features.length === 0 && <li style={{ color: 'var(--muted)' }}>Contact us for details</li>}
+                  </ul>
+                  <Link className="button price-button" href={`/checkout?plan=${encodeURIComponent(pkg.slug)}`}>{pkg.ctaLabel || 'Get started'} <ArrowRight size={16} /></Link>
+                  {waHref && <a href={waHref} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'center', color: '#70e6ac', fontSize: 12, marginTop: 10 }}><MessageCircle size={13} /> Ask on WhatsApp</a>}
+                </article>
+              )
+            })}
           </div>
-          <div className="maintenance">
-            <div><Wrench size={22} /><strong>Monthly maintenance</strong><span>First month free for all packages</span></div>
-            <p>Silver <b>Rs. 1,500</b> / mo</p>
-            <p>Gold <b>Rs. 2,500</b> / mo</p>
-            <p>Platinum <b>Rs. 5,000</b> / mo</p>
-          </div>
+          {maintenance.length > 0 && (
+            <div className="maintenance">
+              <div><Wrench size={22} /><strong>Monthly maintenance</strong><span>First month free for all packages</span></div>
+              {maintenance.map((m) => <p key={m.id}>{m.name} <b>{productPrice(m)}</b> / mo</p>)}
+            </div>
+          )}
         </div>
       </section>
 
@@ -170,12 +199,12 @@ export default async function Home() {
             <h2>Tell us what&apos;s next.</h2>
             <p className="section-intro">Share a little context and we&apos;ll come back with a thoughtful next step. No pressure, no generic pitch.</p>
             <div className="contact-details">
-              <a href={`tel:${contact.phoneOne.replaceAll(' ', '')}`}><MessageCircle size={19} /> {contact.phoneOne}</a>
-              <a href={`tel:${contact.phoneTwo.replaceAll(' ', '')}`}><MessageCircle size={19} /> {contact.phoneTwo}</a>
+              <a href={`tel:${contact.phoneOne.replaceAll(' ', '')}`}><Phone size={19} strokeWidth={2} /> {contact.phoneOne}</a>
+              <a href={`tel:${contact.phoneTwo.replaceAll(' ', '')}`}><Phone size={19} strokeWidth={2} /> {contact.phoneTwo}</a>
               <a href={`mailto:${contact.email}`}><Mail size={19} /> {contact.email}</a>
             </div>
           </div>
-          <ContactForm />
+          <ContactForm serviceOptions={serviceTitles} packageOptions={packageNames} />
         </div>
       </section>
 

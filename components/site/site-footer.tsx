@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Mail, MessageCircle } from 'lucide-react'
 import { Logo } from './logo'
+import { WhatsAppWidget } from './whatsapp-widget'
 import { getFooterData } from '@/lib/chrome'
 
 function InstagramIcon() {
@@ -78,6 +79,29 @@ export async function SiteFooter() {
                 <Mail size={14} /> {data.contactLine}
               </a>
             )}
+            <a
+              href={data.whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'inline-flex', gap: 8, alignItems: 'center', color: '#25D366', fontSize: 12, marginTop: 10, fontWeight: 600 }}
+            >
+              <MessageCircle size={14} /> Chat on WhatsApp
+            </a>
+            {data.whatsapp.numbers.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                {data.whatsapp.numbers.map((n) => (
+                  <a
+                    key={n.id}
+                    href={`https://wa.me/${n.phone}?text=${encodeURIComponent(data.whatsapp.defaultMessage)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#8aa0b8', fontSize: 11 }}
+                  >
+                    {n.label} — +{n.phone}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
           {data.columns.map((column) => (
             <div key={column.id}>
@@ -108,9 +132,13 @@ export async function SiteFooter() {
           <Link href="/terms" style={{ color: '#6f8297', fontSize: 11 }}>Terms &amp; Conditions</Link>
         </div>
       </footer>
-      <a className="whatsapp-float" href={data.whatsappUrl} target="_blank" rel="noreferrer" aria-label="Chat on WhatsApp">
-        <MessageCircle size={24} />
-      </a>
+      <WhatsAppWidget
+        number={data.whatsapp.number}
+        defaultMessage={data.whatsapp.defaultMessage}
+        widgetEnabled={data.whatsapp.widgetEnabled}
+        visibility={data.whatsapp.visibility}
+        hiddenPaths={data.whatsapp.hiddenPaths}
+      />
     </>
   )
 }

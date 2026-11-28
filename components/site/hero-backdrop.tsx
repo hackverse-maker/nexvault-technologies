@@ -30,6 +30,8 @@ export function HeroBackdrop({ slides }: { slides: PublicSlide[] }) {
           src={slide.image!}
           alt=""
           sizes="100vw"
+          loading={i === 0 ? 'eager' : 'lazy'}
+          fetchPriority={i === 0 ? 'high' : 'auto'}
           style={{
             position: 'absolute',
             inset: 0,
